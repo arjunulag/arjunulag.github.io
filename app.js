@@ -149,42 +149,74 @@ class FourierApp {
                 fileName.textContent = `Loading: ${filename}`;
                 sampleMenu.classList.add('hidden');
                 
-                // Try fetch first (works on servers)
-                fetch(`./examples/${filename}`)
-                    .then(response => {
-                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                        return response.text();
-                    })
+                // Try multiple path variations for maximum compatibility
+                const paths = [
+                    `examples/${filename}`,           // Relative to current directory
+                    `./examples/${filename}`,         // Explicit relative
+                    `/examples/${filename}`,          // From root
+                    `${window.location.origin}${window.location.pathname.replace(/\/[^\/]*$/, '')}/examples/${filename}` // Absolute
+                ];
+                
+                console.log('Trying to load:', filename);
+                console.log('Current location:', window.location.href);
+                console.log('Will try paths:', paths);
+                
+                // Try each path until one works
+                const tryPaths = async () => {
+                    for (const svgPath of paths) {
+                        try {
+                            console.log('Trying:', svgPath);
+                            const response = await fetch(svgPath);
+                            if (response.ok) {
+                                console.log('Success with:', svgPath);
+                                return await response.text();
+                            }
+                        } catch (e) {
+                            console.log('Failed:', svgPath, e.message);
+                        }
+                    }
+                    throw new Error('All paths failed');
+                };
+                
+                tryPaths()
                     .then(text => {
                         fileName.textContent = `Loaded: ${filename}`;
                         this.loadSVG(text);
                     })
                     .catch(error => {
-                        // If fetch fails (file:// protocol), show helpful message
-                        fileName.textContent = 'Please use local server';
-                        console.error('Failed to load:', filename, error);
+                        console.error('All paths failed to load:', filename, error);
                         
-                        // Show user-friendly dialog
-                        const useServer = confirm(
-                            `Sample SVGs require a local server to load.\n\n` +
-                            `Would you like instructions on how to start one?\n\n` +
-                            `Click OK for instructions, or Cancel to manually upload the file from the examples folder.`
-                        );
+                        // Check if we're on file:// protocol
+                        const isFileProtocol = window.location.protocol === 'file:';
                         
-                        if (useServer) {
+                        if (isFileProtocol) {
+                            // Local file system - show server instructions
+                            fileName.textContent = 'Need local server';
+                            const useServer = confirm(
+                                `Sample SVGs require a local server.\n\n` +
+                                `Click OK for instructions, or Cancel to manually upload the file.`
+                            );
+                            
+                            if (useServer) {
+                                alert(
+                                    `To use Sample SVGs:\n\n` +
+                                    `OPTION 1: Double-click START_SERVER.bat\n` +
+                                    `OPTION 2: Run: python -m http.server 8000\n` +
+                                    `OPTION 3: Manually upload examples/${filename}`
+                                );
+                            }
+                        } else {
+                            // On a server (like GitHub Pages) - show path error
+                            fileName.textContent = 'File not found';
                             alert(
-                                `To use Sample SVGs:\n\n` +
-                                `OPTION 1 (Easiest):\n` +
-                                `  • Double-click START_SERVER.bat\n` +
-                                `  • Browser opens automatically\n\n` +
-                                `OPTION 2 (Manual):\n` +
-                                `  • Open Command Prompt in this folder\n` +
-                                `  • Run: python -m http.server 8000\n` +
-                                `  • Open: http://localhost:8000\n\n` +
-                                `OPTION 3 (Upload Manually):\n` +
-                                `  • Click "Upload Your SVG"\n` +
-                                `  • Browse to examples/${filename}\n` +
-                                `  • Select and open it`
+                                `Could not load: ${filename}\n\n` +
+                                `Tried multiple paths (see console for details)\n\n` +
+                                `Please check:\n` +
+                                `• The examples folder exists in your repo\n` +
+                                `• The file ${filename} is in examples/\n` +
+                                `• File names match exactly (case-sensitive)\n` +
+                                `• The folder is committed and pushed to GitHub\n\n` +
+                                `You can also upload the file manually using "Upload Your SVG".`
                             );
                         }
                     });
