@@ -149,26 +149,45 @@ class FourierApp {
                 fileName.textContent = `Loading: ${filename}`;
                 sampleMenu.classList.add('hidden');
                 
-                // Use XMLHttpRequest for better compatibility with file:// protocol
-                const xhr = new XMLHttpRequest();
-                xhr.open('GET', `examples/${filename}`, true);
-                
-                xhr.onload = () => {
-                    if (xhr.status === 200 || xhr.status === 0) { // 0 for file:// protocol
+                // Try fetch first (works on servers)
+                fetch(`./examples/${filename}`)
+                    .then(response => {
+                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                        return response.text();
+                    })
+                    .then(text => {
                         fileName.textContent = `Loaded: ${filename}`;
-                        this.loadSVG(xhr.responseText);
-                    } else {
-                        fileName.textContent = 'Error loading file';
-                        alert('Error loading sample SVG. Please run this app on a local server.\n\nTry: python -m http.server 8000');
-                    }
-                };
-                
-                xhr.onerror = () => {
-                    fileName.textContent = 'Error loading file';
-                    alert('Error loading sample SVG. Please run this app on a local server.\n\nQuick fix:\n1. Open terminal in this folder\n2. Run: python -m http.server 8000\n3. Open: http://localhost:8000');
-                };
-                
-                xhr.send();
+                        this.loadSVG(text);
+                    })
+                    .catch(error => {
+                        // If fetch fails (file:// protocol), show helpful message
+                        fileName.textContent = 'Please use local server';
+                        console.error('Failed to load:', filename, error);
+                        
+                        // Show user-friendly dialog
+                        const useServer = confirm(
+                            `Sample SVGs require a local server to load.\n\n` +
+                            `Would you like instructions on how to start one?\n\n` +
+                            `Click OK for instructions, or Cancel to manually upload the file from the examples folder.`
+                        );
+                        
+                        if (useServer) {
+                            alert(
+                                `To use Sample SVGs:\n\n` +
+                                `OPTION 1 (Easiest):\n` +
+                                `  • Double-click START_SERVER.bat\n` +
+                                `  • Browser opens automatically\n\n` +
+                                `OPTION 2 (Manual):\n` +
+                                `  • Open Command Prompt in this folder\n` +
+                                `  • Run: python -m http.server 8000\n` +
+                                `  • Open: http://localhost:8000\n\n` +
+                                `OPTION 3 (Upload Manually):\n` +
+                                `  • Click "Upload Your SVG"\n` +
+                                `  • Browse to examples/${filename}\n` +
+                                `  • Select and open it`
+                            );
+                        }
+                    });
             });
         });
 
