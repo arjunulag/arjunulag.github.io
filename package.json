@@ -1,0 +1,21 @@
+{
+  "name": "fourier-svg-approximation",
+  "version": "1.0.0",
+  "description": "Interactive Fourier series approximation of SVG shapes with epicycle visualization",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve .",
+    "dev": "npx serve ."
+  },
+  "keywords": [
+    "fourier",
+    "svg",
+    "visualization",
+    "epicycles",
+    "mathematics",
+    "animation"
+  ],
+  "author": "",
+  "license": "MIT"
+}
+
